@@ -1,3 +1,4 @@
+```js
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -5,7 +6,7 @@ const cors = require("cors");
 
 const app = express();
 app.use(cors());
-app.use(express.static("public")); // тут лежат Tanks/ и sounds/
+app.use(express.static("public"));
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -17,11 +18,10 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// ---- КОНСТАНТЫ КАРТЫ ----
+// ---- КАРТА ----
 const MAP_WIDTH = 1600;
 const MAP_HEIGHT = 600;
 
-// простая «холмистая» карта
 function groundHeight(x) {
   const nx = x / MAP_WIDTH;
   const base = MAP_HEIGHT * 0.7;
@@ -30,8 +30,10 @@ function groundHeight(x) {
   return base - h1 - h2;
 }
 
-// ---- ТАНКИ ----
+const FLAG_RED = { x: 200, y: groundHeight(200) };
+const FLAG_BLUE = { x: MAP_WIDTH - 200, y: groundHeight(MAP_WIDTH - 200) };
 
+// ---- ТАНКИ ----
 const tankTypes = {
   T34: {
     id: "T34",
@@ -101,12 +103,11 @@ const tankTypes = {
 };
 
 function kmhToPxPerSec(kmh) {
-  return (kmh / 3.6) * 10; // условный масштаб
+  return (kmh / 3.6) * 10;
 }
 
-// ---- ГЛОБАЛЬНОЕ СОСТОЯНИЕ ----
-
-let tanks = []; // {id, socketId, team, typeId, x,y, dir, hp, maxHp, reload, alive}
+// ---- СОСТОЯНИЕ ----
+let tanks = []; // {id,socketId,team,typeId,x,y,hp,maxHp,reload,alive}
 let nextTankId = 1;
 
 let teamKills = {
@@ -114,22 +115,17 @@ let teamKills = {
   blue: 0
 };
 
-const inputs = new Map(); // socketId -> {move:-1|0|1}
+const inputs = new Map(); // socketId -> {move}
 
 // ---- ВСПОМОГАТЕЛЬНОЕ ----
-
 function getSpawnPos(team) {
-  const x = team === "red" ? 200 : MAP_WIDTH - 200;
+  const x = team === "red" ? FLAG_RED.x : FLAG_BLUE.x;
   const y = groundHeight(x);
   return { x, y };
 }
 
 function getTankBySocket(socketId) {
   return tanks.find(t => t.socketId === socketId && t.alive);
-}
-
-function getTankById(id) {
-  return tanks.find(t => t.id === id);
 }
 
 function canUseTank(team, typeId) {
@@ -144,9 +140,7 @@ function randomDamage(min, max) {
 }
 
 // ---- СТРЕЛЬБА ----
-
 function rayHitTank(ray, tank) {
-  // ray: {x,y,angle,maxDist}
   const dx = Math.cos(ray.angle);
   const dy = Math.sin(ray.angle);
 
@@ -181,10 +175,9 @@ function rayHitsGround(ray) {
 function handleFire(shooter, angleDeg) {
   const tt = tankTypes[shooter.typeId];
   if (!tt) return;
-
   if (shooter.reload > 0) return;
 
-  const angleRad = (angleDeg * Math.PI) / 180;
+  const angleRad = angleDeg * Math.PI / 180;
   const maxDist = 2000;
 
   const ray = {
@@ -270,7 +263,6 @@ function handleFire(shooter, angleDeg) {
 }
 
 // ---- SOCKET.IO ----
-
 io.on("connection", socket => {
   console.log("Client connected", socket.id);
 
@@ -280,7 +272,8 @@ io.on("connection", socket => {
     mapWidth: MAP_WIDTH,
     mapHeight: MAP_HEIGHT,
     tankTypes,
-    teamKills
+    teamKills,
+    flags: { red: FLAG_RED, blue: FLAG_BLUE }
   });
 
   socket.on("chooseTeam", team => {
@@ -292,14 +285,11 @@ io.on("connection", socket => {
   socket.on("spawnTank", typeId => {
     const team = socket.data.team;
     if (!team) return;
-
     if (!tankTypes[typeId]) return;
     if (!canUseTank(team, typeId)) return;
 
     const existing = getTankBySocket(socket.id);
-    if (existing) {
-      existing.alive = false;
-    }
+    if (existing) existing.alive = false;
 
     const tt = tankTypes[typeId];
     const spawn = getSpawnPos(team);
@@ -311,7 +301,6 @@ io.on("connection", socket => {
       typeId,
       x: spawn.x,
       y: spawn.y,
-      dir: team === "red" ? 1 : -1,
       hp: tt.hp,
       maxHp: tt.hp,
       reload: 0,
@@ -330,8 +319,7 @@ io.on("connection", socket => {
   socket.on("fire", data => {
     const tank = getTankBySocket(socket.id);
     if (!tank || !tank.alive) return;
-    const angleDeg = data.angleDeg;
-    handleFire(tank, angleDeg);
+    handleFire(tank, data.angleDeg);
   });
 
   socket.on("suicide", () => {
@@ -354,7 +342,6 @@ io.on("connection", socket => {
 });
 
 // ---- ИГРОВОЙ ЦИКЛ ----
-
 let lastTick = Date.now();
 
 setInterval(() => {
@@ -368,7 +355,9 @@ setInterval(() => {
     const tt = tankTypes[t.typeId];
     const speed = kmhToPxPerSec(tt.speedKmh);
 
-    t.x += inp.move * speed * dt * (t.team === "red" ? 1 : -1);
+    const dir = t.team === "red" ? 1 : -1;
+    t.x += inp.move * speed * dt * dir;
+
     if (t.x < 50) t.x = 50;
     if (t.x > MAP_WIDTH - 50) t.x = MAP_WIDTH - 50;
 
@@ -385,8 +374,6 @@ setInterval(() => {
     teamKills
   });
 }, 50);
-
-// ---- СТАРТ ----
 
 server.listen(PORT, () => {
   console.log("Tank server running on port", PORT);
