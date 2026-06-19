@@ -354,10 +354,8 @@ setInterval(() => {
     const tt = tankTypes[t.typeId];
     const speed = kmhToPxPerSec(tt.speedKmh);
 
-    // красные: A назад, D вперёд
-    // синие: A вперёд, D назад (инверсия)
-    const dir = t.team === "red" ? 1 : -1;
-    t.x += inp.move * speed * dt * dir;
+    // ВСЕ: A = влево, D = вправо
+    t.x += inp.move * speed * dt;
 
     if (t.x < 50) t.x = 50;
     if (t.x > MAP_WIDTH - 50) t.x = MAP_WIDTH - 50;
