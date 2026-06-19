@@ -1,4 +1,3 @@
-```js
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -18,7 +17,7 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// ---- КАРТА ----
+// ---------- КАРТА ----------
 const MAP_WIDTH = 1600;
 const MAP_HEIGHT = 600;
 
@@ -33,7 +32,7 @@ function groundHeight(x) {
 const FLAG_RED = { x: 200, y: groundHeight(200) };
 const FLAG_BLUE = { x: MAP_WIDTH - 200, y: groundHeight(MAP_WIDTH - 200) };
 
-// ---- ТАНКИ ----
+// ---------- ТАНКИ ----------
 const tankTypes = {
   T34: {
     id: "T34",
@@ -106,7 +105,7 @@ function kmhToPxPerSec(kmh) {
   return (kmh / 3.6) * 10;
 }
 
-// ---- СОСТОЯНИЕ ----
+// ---------- СОСТОЯНИЕ ----------
 let tanks = []; // {id,socketId,team,typeId,x,y,hp,maxHp,reload,alive}
 let nextTankId = 1;
 
@@ -117,7 +116,7 @@ let teamKills = {
 
 const inputs = new Map(); // socketId -> {move}
 
-// ---- ВСПОМОГАТЕЛЬНОЕ ----
+// ---------- ВСПОМОГАТЕЛЬНОЕ ----------
 function getSpawnPos(team) {
   const x = team === "red" ? FLAG_RED.x : FLAG_BLUE.x;
   const y = groundHeight(x);
@@ -139,7 +138,7 @@ function randomDamage(min, max) {
   return min + Math.random() * (max - min);
 }
 
-// ---- СТРЕЛЬБА ----
+// ---------- СТРЕЛЬБА ----------
 function rayHitTank(ray, tank) {
   const dx = Math.cos(ray.angle);
   const dy = Math.sin(ray.angle);
@@ -149,7 +148,7 @@ function rayHitTank(ray, tank) {
   if (t < 0 || t > ray.maxDist) return null;
 
   const ry = ray.y + dy * t;
-  const distY = Math.abs(ry - tank.y);
+  const distY = Math.abs(ry - (tank.y - 20));
   if (distY > 30) return null;
 
   return { dist: t, hitX: tx, hitY: ry };
@@ -262,7 +261,7 @@ function handleFire(shooter, angleDeg) {
   }
 }
 
-// ---- SOCKET.IO ----
+// ---------- SOCKET.IO ----------
 io.on("connection", socket => {
   console.log("Client connected", socket.id);
 
@@ -341,7 +340,7 @@ io.on("connection", socket => {
   });
 });
 
-// ---- ИГРОВОЙ ЦИКЛ ----
+// ---------- ИГРОВОЙ ЦИКЛ ----------
 let lastTick = Date.now();
 
 setInterval(() => {
