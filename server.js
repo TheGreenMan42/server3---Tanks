@@ -148,19 +148,19 @@ function rayHitTank(ray, tank) {
   if (t < 0 || t > ray.maxDist) return null;
 
   const ry = ray.y + dy * t;
-  const distY = Math.abs(ry - (tank.y - 20));
+  const distY = Math.abs(ry - tank.y);
   if (distY > 30) return null;
 
   return { dist: t, hitX: tx, hitY: ry };
 }
 
 function rayHitsGround(ray) {
-  const steps = 100;
+  const steps = 400;
   const dx = Math.cos(ray.angle) * (ray.maxDist / steps);
   const dy = Math.sin(ray.angle) * (ray.maxDist / steps);
   let x = ray.x;
   let y = ray.y;
-  for (let i = 0; i < steps; i++) {
+  for (let i = 0; i <= steps; i++) {
     const gh = groundHeight(x);
     if (y >= gh) {
       return { x, y };
@@ -181,7 +181,7 @@ function handleFire(shooter, angleDeg) {
 
   const ray = {
     x: shooter.x,
-    y: shooter.y - 20,
+    y: shooter.y, // центр танка
     angle: angleRad,
     maxDist
   };
