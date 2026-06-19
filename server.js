@@ -181,7 +181,7 @@ function handleFire(shooter, angleDeg) {
 
   const ray = {
     x: shooter.x,
-    y: shooter.y, // центр танка
+    y: shooter.y, // центр танка / PNG
     angle: angleRad,
     maxDist
   };
@@ -354,6 +354,8 @@ setInterval(() => {
     const tt = tankTypes[t.typeId];
     const speed = kmhToPxPerSec(tt.speedKmh);
 
+    // красные: A назад, D вперёд
+    // синие: A вперёд, D назад (инверсия)
     const dir = t.team === "red" ? 1 : -1;
     t.x += inp.move * speed * dt * dir;
 
