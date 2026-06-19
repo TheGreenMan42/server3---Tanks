@@ -5,7 +5,7 @@ const cors = require("cors");
 
 const app = express();
 app.use(cors());
-app.use(express.static("public"));
+app.use(express.static("public")); // тут лежат Tanks/ и sounds/
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -147,7 +147,6 @@ function randomDamage(min, max) {
 
 function rayHitTank(ray, tank) {
   // ray: {x,y,angle,maxDist}
-  // простая проверка: берём x танка, считаем y луча, сравниваем
   const dx = Math.cos(ray.angle);
   const dy = Math.sin(ray.angle);
 
@@ -195,7 +194,6 @@ function handleFire(shooter, angleDeg) {
     maxDist
   };
 
-  // проверка земли
   const groundHit = rayHitsGround(ray);
   let maxRayDist = maxDist;
   if (groundHit) {
@@ -222,7 +220,6 @@ function handleFire(shooter, angleDeg) {
   let hitInfo = null;
 
   if (bestHit && bestTank) {
-    // проверка пробития
     const targetType = tankTypes[bestTank.typeId];
     const pen = tt.pen;
     const armor = targetType.armor;
@@ -245,11 +242,8 @@ function handleFire(shooter, angleDeg) {
 
       if (bestTank.hp <= 0) {
         bestTank.alive = false;
-        // килл команде стрелка
         if (shooter.team === "red") teamKills.red++;
         else teamKills.blue++;
-
-        // через 3 секунды игрока вернёт в меню (клиент сам)
       }
     } else {
       hitInfo = {
@@ -280,7 +274,6 @@ function handleFire(shooter, angleDeg) {
 io.on("connection", socket => {
   console.log("Client connected", socket.id);
 
-  // по умолчанию без команды
   socket.data.team = null;
 
   socket.emit("init", {
@@ -369,7 +362,6 @@ setInterval(() => {
   const dt = (now - lastTick) / 1000;
   lastTick = now;
 
-  // движение танков
   tanks.forEach(t => {
     if (!t.alive) return;
     const inp = inputs.get(t.socketId) || { move: 0 };
@@ -387,9 +379,6 @@ setInterval(() => {
       if (t.reload < 0) t.reload = 0;
     }
   });
-
-  // чистим мёртвых танков (оставляем, чтобы клиент мог показать взрыв, но можно и удалять)
-  // здесь оставим, просто alive=false
 
   io.emit("state", {
     tanks,
